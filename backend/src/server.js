@@ -29,4 +29,9 @@ const startServer = async () => {
   }
 };
 
+
+// require("dotenv").config();
+
+console.log("TrueData username:", process.env.TRUEDATA_USERNAME);
+
 startServer();
