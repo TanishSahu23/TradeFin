@@ -27,8 +27,4 @@ const startServer = async () => {
   }
 };
 
-
-// require("dotenv").config();
-
-
 startServer();

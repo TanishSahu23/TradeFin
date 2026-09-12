@@ -12,12 +12,10 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const token =
-      localStorage.getItem("tradefin_token");
+    const token = localStorage.getItem("tradefin_token");
 
     if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     return config;
@@ -32,13 +30,8 @@ apiClient.interceptors.response.use(
 
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(
-        "tradefin_token"
-      );
-
-      localStorage.removeItem(
-        "tradefin_user"
-      );
+      localStorage.removeItem("tradefin_token");
+      localStorage.removeItem("tradefin_user");
     }
 
     return Promise.reject(error);
