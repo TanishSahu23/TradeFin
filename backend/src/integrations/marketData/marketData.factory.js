@@ -1,10 +1,15 @@
-import marketDataConfig from "./marketData.config.js";
-import truedataClient from "./providers/truedata.client.js";
+import marketDataConfig
+  from "./marketData.config.js";
+
+import alphaVantageClient
+  from "./providers/alphaVantage.client.js";
 
 const getMarketDataClient = () => {
-  switch (marketDataConfig.provider) {
-    case "truedata":
-      return truedataClient;
+  switch (
+    marketDataConfig.provider
+  ) {
+    case "alphavantage":
+      return alphaVantageClient;
 
     case "none":
       throw new Error(

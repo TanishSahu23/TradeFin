@@ -18,11 +18,13 @@ export const getCashBalance = async (userId) => {
 };
 
 export const getPortfolioSummary = async (userId) => {
-  const cashBalance = await getCashBalance(userId);
+  const cashBalance =
+    await getCashBalance(userId);
 
-  const holdings = await Holding.find({
-    user: userId,
-  }).populate("instrument");
+  const holdings =
+    await Holding.find({
+      user: userId,
+    }).populate("instrument");
 
   let investedAmount = 0;
   let currentValue = 0;
@@ -30,7 +32,8 @@ export const getPortfolioSummary = async (userId) => {
   let realizedPnL = 0;
 
   for (const holding of holdings) {
-    realizedPnL += holding.realizedPnL || 0;
+    realizedPnL +=
+      holding.realizedPnL || 0;
 
     if (holding.quantity <= 0) {
       continue;
@@ -44,9 +47,14 @@ export const getPortfolioSummary = async (userId) => {
       holdingCurrentValue -
       holding.investedAmount;
 
-    investedAmount += holding.investedAmount;
-    currentValue += holdingCurrentValue;
-    unrealizedPnL += holdingUnrealizedPnL;
+    investedAmount +=
+      holding.investedAmount;
+
+    currentValue +=
+      holdingCurrentValue;
+
+    unrealizedPnL +=
+      holdingUnrealizedPnL;
   }
 
   const portfolioValue =
@@ -72,13 +80,14 @@ export const getPortfolioAllocation = async (
   const cashBalance =
     await getCashBalance(userId);
 
-  const holdings = await Holding.find({
-    user: userId,
-    quantity: { $gt: 0 },
-  }).populate("instrument");
+  const holdings =
+    await Holding.find({
+      user: userId,
+      quantity: { $gt: 0 },
+    }).populate("instrument");
 
-  const holdingData = holdings.map(
-    (holding) => {
+  const holdingData =
+    holdings.map((holding) => {
       const currentValue =
         holding.quantity *
         holding.instrument.currentPrice;
@@ -86,16 +95,19 @@ export const getPortfolioAllocation = async (
       return {
         instrumentId:
           holding.instrument._id,
+
         symbol:
           holding.instrument.symbol,
+
         name:
           holding.instrument.name,
+
         sector:
           holding.instrument.sector,
+
         currentValue,
       };
-    }
-  );
+    });
 
   const totalHoldingsValue =
     holdingData.reduce(
@@ -105,20 +117,26 @@ export const getPortfolioAllocation = async (
     );
 
   const portfolioValue =
-    cashBalance + totalHoldingsValue;
+    cashBalance +
+    totalHoldingsValue;
 
   const allocations =
     holdingData.map((holding) => ({
       instrumentId:
         holding.instrumentId,
+
       symbol:
         holding.symbol,
+
       name:
         holding.name,
+
       sector:
         holding.sector,
+
       currentValue:
         holding.currentValue,
+
       allocationPercentage:
         portfolioValue > 0
           ? (holding.currentValue /
@@ -129,48 +147,95 @@ export const getPortfolioAllocation = async (
 
   return {
     portfolioValue,
+
     cashBalance,
+
     cashAllocationPercentage:
       portfolioValue > 0
         ? (cashBalance /
             portfolioValue) *
           100
         : 0,
+
     holdings: allocations,
   };
 };
 
+/**
+ * Create or update today's portfolio snapshot.
+ *
+ * IMPORTANT:
+ *
+ * This function is intentionally reusable.
+ *
+ * It can be called by:
+ *
+ * 1. The daily cron job
+ * 2. Immediately after BUY
+ * 3. Immediately after SELL
+ * 4. A manual snapshot endpoint
+ *
+ * This means Analytics does not have to wait
+ * until 4:00 PM after a portfolio transaction.
+ */
 export const createPortfolioSnapshot =
   async (userId) => {
     const summary =
       await getPortfolioSummary(userId);
 
+    /**
+     * Normalize today's date to midnight.
+     */
     const today = new Date();
 
-    today.setHours(0, 0, 0, 0);
+    today.setHours(
+      0,
+      0,
+      0,
+      0
+    );
 
+    /**
+     * Find the previous trading/day snapshot.
+     *
+     * We deliberately exclude today's snapshot.
+     */
     const previousSnapshot =
       await PortfolioSnapshot.findOne({
         user: userId,
-        date: { $lt: today },
+
+        date: {
+          $lt: today,
+        },
       }).sort({
         date: -1,
       });
 
     let externalCashFlow = 0;
 
+    /**
+     * External cash flows are deposits/
+     * withdrawals represented by ADJUSTMENT.
+     *
+     * BUY and SELL are portfolio transactions,
+     * not external cash flows.
+     */
     if (previousSnapshot) {
       const ledgerEntries =
         await CashLedger.find({
           user: userId,
+
           type: {
             $in: [
               "INITIAL_CREDIT",
               "ADJUSTMENT",
             ],
           },
+
           createdAt: {
-            $gt: previousSnapshot.createdAt,
+            $gt:
+              previousSnapshot.createdAt,
+
             $lt: new Date(),
           },
         });
@@ -192,6 +257,10 @@ export const createPortfolioSnapshot =
     let dailyPnL = 0;
     let dailyReturn = 0;
 
+    /**
+     * Calculate today's performance
+     * relative to the previous snapshot.
+     */
     if (previousSnapshot) {
       const portfolioValueChange =
         summary.portfolioValue -
@@ -211,31 +280,54 @@ export const createPortfolioSnapshot =
       }
     }
 
+    /**
+     * Upsert today's snapshot.
+     *
+     * If today's snapshot already exists,
+     * it is UPDATED immediately.
+     *
+     * If it doesn't exist,
+     * it is CREATED.
+     */
     const snapshot =
       await PortfolioSnapshot.findOneAndUpdate(
         {
           user: userId,
+
           date: today,
         },
+
         {
           user: userId,
+
           date: today,
+
           cashBalance:
             summary.cashBalance,
+
           investedAmount:
             summary.investedAmount,
+
           portfolioValue:
             summary.portfolioValue,
+
           totalPnL:
             summary.totalPnL,
+
           dailyPnL,
+
           externalCashFlow,
+
           dailyReturn,
         },
+
         {
           upsert: true,
-          returnDocument: "after",
-          setDefaultsOnInsert: true,
+
+          new: true,
+
+          setDefaultsOnInsert:
+            true,
         }
       );
 
@@ -256,10 +348,11 @@ export const getSectorAllocation =
     const cashBalance =
       await getCashBalance(userId);
 
-    const holdings = await Holding.find({
-      user: userId,
-      quantity: { $gt: 0 },
-    }).populate("instrument");
+    const holdings =
+      await Holding.find({
+        user: userId,
+        quantity: { $gt: 0 },
+      }).populate("instrument");
 
     const sectorMap = {};
 
@@ -276,11 +369,14 @@ export const getSectorAllocation =
         sectorMap[sector] = 0;
       }
 
-      sectorMap[sector] += currentValue;
+      sectorMap[sector] +=
+        currentValue;
     }
 
     const totalHoldingsValue =
-      Object.values(sectorMap).reduce(
+      Object.values(
+        sectorMap
+      ).reduce(
         (total, value) =>
           total + value,
         0
@@ -291,11 +387,18 @@ export const getSectorAllocation =
       totalHoldingsValue;
 
     const sectors =
-      Object.entries(sectorMap)
+      Object.entries(
+        sectorMap
+      )
         .map(
-          ([sector, currentValue]) => ({
+          ([
             sector,
             currentValue,
+          ]) => ({
+            sector,
+
+            currentValue,
+
             allocationPercentage:
               portfolioValue > 0
                 ? (currentValue /
@@ -315,19 +418,24 @@ export const getSectorAllocation =
 
     return {
       portfolioValue,
+
       cashBalance,
+
       cashAllocationPercentage:
         portfolioValue > 0
           ? (cashBalance /
               portfolioValue) *
             100
           : 0,
+
       sectors,
+
       concentration:
         largestSector
           ? {
               largestSector:
                 largestSector.sector,
+
               largestSectorPercentage:
                 largestSector.allocationPercentage,
             }
@@ -337,9 +445,10 @@ export const getSectorAllocation =
 
 export const createSnapshotsForAllUsers =
   async () => {
-    const users = await User.find({})
-      .select("_id")
-      .lean();
+    const users =
+      await User.find({})
+        .select("_id")
+        .lean();
 
     let successful = 0;
     let failed = 0;
@@ -361,8 +470,11 @@ export const createSnapshotsForAllUsers =
     }
 
     return {
-      totalUsers: users.length,
+      totalUsers:
+        users.length,
+
       successful,
+
       failed,
     };
   };

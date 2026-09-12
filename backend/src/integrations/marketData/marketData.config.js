@@ -5,20 +5,13 @@ const marketDataConfig = {
   timeout:
     Number(process.env.MARKET_DATA_TIMEOUT) || 10000,
 
-  truedata: {
-    authUrl:
-      process.env.TRUEDATA_AUTH_URL ||
-      "https://auth.truedata.in",
+  alphaVantage: {
+    apiKey:
+      process.env.ALPHA_VANTAGE_API_KEY,
 
-    historyUrl:
-      process.env.TRUEDATA_HISTORY_URL ||
-      "https://history.truedata.in",
-
-    username:
-      process.env.TRUEDATA_USERNAME,
-
-    password:
-      process.env.TRUEDATA_PASSWORD,
+    baseUrl:
+      process.env.ALPHA_VANTAGE_BASE_URL ||
+      "https://www.alphavantage.co/query",
   },
 };
 

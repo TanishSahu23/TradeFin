@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   getHistoricalPrices,
   getInstrument,
+  getLatestPrice,
 } from "../../api/instrument.api.js";
 
 import {
@@ -44,14 +45,47 @@ const InstrumentDetails = () => {
         const [
           instrumentData,
           historicalData,
+          latestPriceData,
         ] = await Promise.all([
           getInstrument(id),
+
           getHistoricalPrices(id, {
             limit: 120,
           }),
-        ]);
 
-        setInstrument(instrumentData);
+          getLatestPrice(id),
+        ]); 
+
+        setInstrument({
+          ...instrumentData,
+
+          currentPrice:
+            latestPriceData.currentPrice,
+
+          previousClose:
+            latestPriceData.previousClose,
+
+          open:
+            latestPriceData.open,
+
+          high:
+            latestPriceData.high,
+
+          low:
+            latestPriceData.low,
+
+          volume:
+            latestPriceData.volume,
+
+          change:
+            latestPriceData.change,
+
+          changePercent:
+            latestPriceData.changePercent,
+
+          timestamp:
+          latestPriceData.timestamp,
+        });
 
         setHistoricalPrices(
           Array.isArray(historicalData)
@@ -134,35 +168,12 @@ const InstrumentDetails = () => {
     }
   };
 
-  const getPriceChange = () => {
-    if (!instrument) {
-      return {
-        change: 0,
-        changePercent: 0,
-      };
-    }
-
-    const currentPrice = Number(
-      instrument.currentPrice || 0
-    );
-
-    const previousClose = Number(
-      instrument.previousClose || 0
-    );
-
-    const change =
-      currentPrice - previousClose;
-
-    const changePercent =
-      previousClose > 0
-        ? (change / previousClose) * 100
-        : 0;
-
-    return {
-      change,
-      changePercent,
-    };
-  };
+  const getPriceChange = () => ({
+    change: Number(instrument?.change || 0),
+    changePercent: Number(
+      instrument?.changePercent || 0
+    ),
+  });
 
   /*
    * -----------------------------------------

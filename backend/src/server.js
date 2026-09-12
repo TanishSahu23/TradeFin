@@ -4,6 +4,7 @@ import app from "./app.js";
 import connectDB from "./config/db.js";
 
 import {
+  runPortfolioSnapshotJob,
   startPortfolioSnapshotJob,
 } from "./jobs/portfolioSnapshot.job.js";
 
@@ -13,18 +14,15 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
-      console.log(
-        `TradeFin server running on port ${PORT}`
-      );
+    app.listen(PORT, "0.0.0.0", async () => {
+      console.log(`TradeFin server running on port ${PORT}`);
+
+      await runPortfolioSnapshotJob();
 
       startPortfolioSnapshotJob();
     });
   } catch (error) {
-    console.error(
-      `Server startup failed: ${error.message}`
-    );
-
+    console.error(`Server startup failed: ${error.message}`);
     process.exit(1);
   }
 };
@@ -32,6 +30,5 @@ const startServer = async () => {
 
 // require("dotenv").config();
 
-console.log("TrueData username:", process.env.TRUEDATA_USERNAME);
 
 startServer();
