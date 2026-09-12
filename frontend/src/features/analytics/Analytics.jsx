@@ -128,13 +128,40 @@ const LineChart = ({
   label,
   formatter = formatNumber,
 }) => {
-  if (!data || data.length < 2) {
-    return (
-      <div className="flex h-64 items-center justify-center rounded-lg bg-gray-50 text-sm text-gray-500">
-        Not enough data for this chart.
-      </div>
-    );
-  }
+if (!data || data.length === 0) {
+  return (
+    <div className="flex h-64 items-center justify-center rounded-lg bg-gray-50 text-sm text-gray-500">
+      No portfolio history available yet.
+    </div>
+  );
+}
+
+if (data.length === 1) {
+  const point = data[0];
+  const value = Number(point[valueKey]);
+
+  return (
+    <div className="flex h-64 flex-col items-center justify-center rounded-lg bg-gray-50 text-sm text-gray-500">
+      <span>
+        {label}
+      </span>
+
+      <span className="mt-2 text-xl font-semibold text-gray-900">
+        {Number.isFinite(value)
+          ? formatter(value)
+          : "—"}
+      </span>
+
+      <span className="mt-1 text-xs text-gray-500">
+        {formatDate(point.date)}
+      </span>
+
+      <span className="mt-3 text-xs text-gray-500">
+        A second snapshot is required to display performance movement.
+      </span>
+    </div>
+  );
+}
 
   const width = 900;
   const height = 300;
