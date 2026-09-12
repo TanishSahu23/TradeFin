@@ -1,21 +1,48 @@
-// Goal
-// This file defines which URL calls which controller.
+import express from "express";
 
 import validate from "../../middleware/validate.middleware.js";
-import { instrumentIdSchema } from "./instrument.validation.js";
-import express from "express";
+
 import {
   getAllInstruments,
   getSingleInstrument,
+  searchInstruments,
 } from "./instrument.controller.js";
 
-const router = express.Router();
+import {
+  instrumentIdSchema,
+} from "./instrument.validation.js";
 
-router.get("/", getAllInstruments);
+const router =
+  express.Router();
 
+/**
+ * Search instruments.
+ *
+ * IMPORTANT:
+ * This must be before /:id.
+ */
+router.get(
+  "/search",
+  searchInstruments
+);
+
+/**
+ * Get all active instruments.
+ */
+router.get(
+  "/",
+  getAllInstruments
+);
+
+/**
+ * Get one instrument.
+ */
 router.get(
   "/:id",
-  validate(instrumentIdSchema, "params"),
+  validate(
+    instrumentIdSchema,
+    "params"
+  ),
   getSingleInstrument
 );
 

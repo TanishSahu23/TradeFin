@@ -27,22 +27,6 @@ const validateConfig = () => {
 /**
  * Convert TradeFin's instrument symbol into
  * the symbol expected by Alpha Vantage.
- *
- * IMPORTANT:
- *
- * Alpha Vantage uses provider-specific
- * exchange suffixes.
- *
- * For the Indian instrument currently
- * being used by TradeFin:
- *
- * HDFCBANK
- *     ↓
- * HDFCBANK.BSE
- *
- * We keep this mapping in one place so
- * the rest of the application doesn't
- * need to know Alpha Vantage's symbol format.
  */
 const normalizeSymbol = (
   symbol,
@@ -57,35 +41,10 @@ const normalizeSymbol = (
   const normalizedSymbol =
     symbol.trim().toUpperCase();
 
-  /**
-   * If the symbol already contains
-   * a provider suffix, don't modify it.
-   *
-   * Example:
-   *
-   * HDFCBANK.BSE
-   */
   if (normalizedSymbol.includes(".")) {
     return normalizedSymbol;
   }
 
-  /**
-   * Current TradeFin → Alpha Vantage
-   * mapping.
-   *
-   * The Alpha Vantage result we already
-   * verified successfully uses:
-   *
-   * HDFCBANK.BSE
-   *
-   * Therefore both NSE/BSE instruments
-   * currently use the BSE provider symbol
-   * when no explicit suffix exists.
-   *
-   * This can later be moved into the
-   * Instrument model if you add many
-   * instruments/providers.
-   */
   if (
     exchange === "NSE" ||
     exchange === "BSE"
@@ -118,33 +77,22 @@ const request = async (params) => {
 
     const data = response.data;
 
-    /**
-     * Alpha Vantage invalid-symbol
-     * or invalid-request response.
-     */
     if (data?.["Error Message"]) {
       throw new Error(
         data["Error Message"]
       );
     }
 
-    /**
-     * Alpha Vantage rate-limit response.
-     */
     if (data?.Note) {
       throw new Error(
         `Alpha Vantage API limit reached: ${data.Note}`
       );
     }
 
-    /**
-     * Alpha Vantage may return an
-     * information message instead of
-     * actual market data.
-     */
     if (
       data?.Information &&
-      !data?.["Time Series (Daily)"]
+      !data?.["Time Series (Daily)"] &&
+      !data?.["bestMatches"]
     ) {
       throw new Error(
         data.Information
@@ -186,11 +134,67 @@ const request = async (params) => {
 };
 
 /**
- * Get the latest available market quote.
+ * Search global symbols using Alpha Vantage.
  *
- * We use TIME_SERIES_DAILY instead of
- * GLOBAL_QUOTE so that the latest daily
- * OHLCV data can also be used.
+ * Alpha Vantage SYMBOL_SEARCH returns
+ * matching symbols and company names.
+ */
+const searchSymbols = async (
+  keywords
+) => {
+  if (!keywords?.trim()) {
+    return [];
+  }
+
+  const data = await request({
+    function: "SYMBOL_SEARCH",
+    keywords:
+      keywords.trim(),
+  });
+
+  const matches =
+    data?.bestMatches;
+
+  if (!Array.isArray(matches)) {
+    return [];
+  }
+
+  return matches.map(
+    (match) => ({
+      symbol:
+        match["1. symbol"],
+
+      name:
+        match["2. name"],
+
+      type:
+        match["3. type"],
+
+      region:
+        match["4. region"],
+
+      marketOpen:
+        match["5. marketOpen"],
+
+      marketClose:
+        match["6. marketClose"],
+
+      timezone:
+        match["7. timezone"],
+
+      currency:
+        match["8. currency"],
+
+      matchScore:
+        Number(
+          match["9. matchScore"] || 0
+        ),
+    })
+  );
+};
+
+/**
+ * Get the latest available market quote.
  */
 const getQuote = async (
   symbol,
@@ -294,20 +298,30 @@ const getQuote = async (
     providerSymbol:
       alphaVantageSymbol,
 
+    currentPrice,
+
     open:
-      latest["1. open"],
+      Number(
+        latest["1. open"]
+      ),
 
     high:
-      latest["2. high"],
+      Number(
+        latest["2. high"]
+      ),
 
     low:
-      latest["3. low"],
+      Number(
+        latest["3. low"]
+      ),
 
     close:
-      latest["4. close"],
+      currentPrice,
 
     volume:
-      latest["5. volume"],
+      Number(
+        latest["5. volume"]
+      ),
 
     previousClose,
 
@@ -392,6 +406,7 @@ const getHistoricalPrices = async (
 };
 
 const alphaVantageClient = {
+  searchSymbols,
   getQuote,
   getHistoricalPrices,
 };

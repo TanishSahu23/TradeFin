@@ -1,15 +1,20 @@
-// Working
-// The controller is the HTTP layer.
-// It receives the Express request and decides what HTTP response to send.
-
 import {
   getAllInstruments as getAllInstrumentsService,
   getSingleInstrument as getSingleInstrumentService,
+  searchInstruments as searchInstrumentsService,
 } from "./instrument.service.js";
 
-export const getAllInstruments = async (req, res, next) => {
+/**
+ * GET /instruments
+ */
+export const getAllInstruments = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const instruments = await getAllInstrumentsService();
+    const instruments =
+      await getAllInstrumentsService();
 
     res.status(200).json({
       success: true,
@@ -20,13 +25,49 @@ export const getAllInstruments = async (req, res, next) => {
   }
 };
 
-export const getSingleInstrument = async (req, res, next) => {
+/**
+ * GET /instruments/:id
+ */
+export const getSingleInstrument = async (
+  req,
+  res,
+  next
+) => {
   try {
-    const instrument = await getSingleInstrumentService(req.params.id);
+    const instrument =
+      await getSingleInstrumentService(
+        req.params.id
+      );
 
     res.status(200).json({
       success: true,
       data: instrument,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /instruments/search?q=ITC
+ */
+export const searchInstruments = async (
+  req,
+  res,
+  next
+) => {
+  try {
+    const query =
+      req.query.q;
+
+    const instruments =
+      await searchInstrumentsService(
+        query
+      );
+
+    res.status(200).json({
+      success: true,
+      data: instruments,
     });
   } catch (error) {
     next(error);
